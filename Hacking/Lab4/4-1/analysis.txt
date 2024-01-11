@@ -1,0 +1,59 @@
+0x4011f9 -> manage_shopping_mall 에서 fgets
+
+tv 만들고 modify하고(32바이트 이상 해야함) -> delete 후 pc만들면 이상해짐 print_info 조작 가능 
+-> 실패.. add_pc_item_at() 에서 print_info가 초기화됨. 
+
+items -> 0x6020e0 (global)
+
+write GOT entry : 0x602038
+
+
+BOF 직접적으로 이용 가능한게 없음.
+
+
+
+0x400c14 : add_tv_item_at 동적할당 이후
+0x400d49 : add_pc_item_at 동적할당 이후
+0x4010f8 : modify_description realloc 이후
+
+
+tv : 80bytes, pc : 72bytes
+
+
+MAX_DESCR_LEN == sizeof(pc)
+따라서 free 후 재 할당시 같은 위치에 할당된다.
+
+char descr[MAX_DESCR_LEN + 8] = { '\0' }; 이건 뭐지..
+
+242줄 분기에 걸리면 realloc된 공간 확인
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+pc만들기 -> 72바이트만큼 modify -> pc하나더 만들기
+-> 73바이트만큼 modify -> pc 하나 더 만들기
+
+3번째 pc의 주소가 첫 번째 pc의 description 주소와 같아짐.
+따라서 첫 번째 pc modify로 주소 조작 가능
+
+48바이트 패딩 후 다음 바이트가 주소 시작
+
+따라서 3번 째 아이템의 이름을 출력한다면?
+-> libc 주소 얻음
+
+write 주소 : 0x4007f0
+write_string 주소 : 0x400aa3
+
+print_info 호출 시 레지스터
+%rdi : 해당 item의 주소
+%rsi : 해당 item의 주소
+%rdx : 해당 item->name의 길이 
+
+
+rdi            0x400684 4195972 --> "/bin/sh" 의 주소
+rsi            0x7fffffffe0a0   140737488347296
+
+0x7fffffffe0a0: 0x0000000000400684      0x000000000040068c
+0x7fffffffe0b0: 0x0000000000000000
+
+0x68732f6e69622f -> /bin/sh
+0x702d -> -p
